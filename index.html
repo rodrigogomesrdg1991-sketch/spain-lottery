@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spain Lottery Analytics & Engine</title>
+    <!-- Fontes Modernas -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <!-- Supabase SDK via CDN (para conexão futura com o banco) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --surface-color: #131b2e;
+            --surface-card: #1a233a;
+            --border-color: rgba(255, 255, 255, 0.08);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-color: #38bdf8;
+            --success-color: #34d399;
+            --radius: 12px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        aside {
+            width: 260px;
+            background-color: var(--surface-color);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 24px;
+        }
+
+        .brand {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 36px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .brand span { color: var(--accent-color); }
+
+        .nav-links { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+
+        .nav-links button {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            text-align: left;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .nav-links button:hover, .nav-links button.active {
+            background-color: var(--surface-card);
+            color: var(--text-primary);
+            border-left: 3px solid var(--accent-color);
+        }
+
+        /* Main Content */
+        main { flex: 1; padding: 40px; max-width: 1200px; margin: 0 auto; }
+
+        header.top-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
+
+        .game-selector {
+            display: flex;
+            gap: 10px;
+            background: var(--surface-color);
+            padding: 6px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border-color);
+        }
+
+        .game-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            padding: 8px 16px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .game-btn.active { background: var(--accent-color); color: var(--bg-color); }
+
+        .view-section { display: none; }
+        .view-section.active { display: block; }
+
+        .card {
+            background-color: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+
+        .card h3 {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 12px;
+        }
+
+        .balls-container { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+
+        .ball {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: var(--surface-card);
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: var(--text-primary);
+        }
+
+        .ball.star {
+            background: rgba(234, 179, 8, 0.15);
+            border-color: rgba(234, 179, 8, 0.3);
+            color: #fde047;
+        }
+
+        .btn-primary {
+            background: var(--accent-color);
+            color: var(--bg-color);
+            border: none;
+            padding: 12px 24px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 16px;
+        }
+
+        input {
+            background: var(--surface-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            width: 100%;
+            margin-top: 6px;
+            margin-bottom: 16px;
+        }
+
+        label { font-size: 0.85rem; color: var(--text-secondary); display: block; }
+    </style>
+</head>
+<body>
+
+    <aside>
+        <div class="brand"><span>⚡</span> SpainLottery.ai</div>
+        <ul class="nav-links">
+            <li><button class="nav-btn active" onclick="switchView('overview', this)">Visão Geral</button></li>
+            <li><button class="nav-btn" onclick="switchView('generator', this)">Gerador & Filtros</button></li>
+            <li><button class="nav-btn" onclick="switchView('history', this)">Histórico & Jogos</button></li>
+        </ul>
+    </aside>
+
+    <main>
+        <header class="top-header">
+            <div>
+                <h1 id="view-title" style="font-size: 1.5rem; font-weight: 600;">Visão Geral do Sistema</h1>
+                <p style="color: var(--text-secondary); font-size: 0.9rem;">Análise estatística e motor de fechamentos para loterias espanholas.</p>
+            </div>
+            <div class="game-selector">
+                <button class="game-btn active" onclick="setGame('euromillones', this)">Euromillones</button>
+                <button class="game-btn" onclick="setGame('eurodreams', this)">EuroDreams</button>
+                <button class="game-btn" onclick="setGame('primitiva', this)">La Primitiva</button>
+            </div>
+        </header>
+
+        <!-- Visão Geral -->
+        <section id="overview" class="view-section active">
+            <div class="card">
+                <h3>Último Sorteio Simulado (<span id="current-game-label">Euromillones</span>)</h3>
+                <div class="balls-container" id="last-draw-balls">
+                    <div class="ball">07</div><div class="ball">14</div><div class="ball">23</div><div class="ball">35</div><div class="ball">42</div>
+                    <div class="ball star">03</div><div class="ball star">09</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Gerador & Motor Matemático -->
+        <section id="generator" class="view-section">
+            <div class="card">
+                <h3>Motor de Fechamentos Matemáticos & Filtros</h3>
+                <label>Grupo de Dezenas Base (separadas por vírgula):</label>
+                <input type="text" id="pool-input" value="1, 5, 12, 18, 24, 28, 33, 40, 45, 48">
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div>
+                        <label>Dezenas por Bilhete (k):</label>
+                        <input type="number" id="k-size" value="6">
+                    </div>
+                    <div>
+                        <label>Soma Mínima / Máxima (Faixa):</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="number" id="min-sum" value="45">
+                            <input type="number" id="max-sum" value="205">
+                        </div>
+                    </div>
+                </div>
+                <button class="btn-primary" onclick="runGenerator()">Gerar Fechamento Otimizado</button>
+            </div>
+
+            <div class="card" id="results-card" style="display: none;">
+                <h3 id="results-title">Jogos Gerados</h3>
+                <div id="results-container" style="max-height: 350px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; margin-top: 12px;"></div>
+            </div>
+        </section>
+
+        <!-- Histórico -->
+        <section id="history" class="view-section">
+            <div class="card">
+                <h3>Jogos Salvos</h3>
+                <p style="color: var(--text-secondary); margin-top: 8px;">Os jogos gerados aparecerão aqui para salvamento.</p>
+            </div>
+        </section>
+    </main>
+
+    <!-- Conecta a lógica em JavaScript puro -->
+    <script src="app.js"></script>
+</body>
+</html>
