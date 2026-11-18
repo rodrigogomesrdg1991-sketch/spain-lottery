@@ -1,6 +1,6 @@
 let activeGame = 'euromillones';
 
-// Dicionário com as regras e os números do último sorteio (principais + extras/estrelas)
+// Dicionário com as regras, dezenas padrão e os números extras (estrelas/sonho/reintegro)
 const lotteryRules = {
     euromillones: {
         kSize: 5,
@@ -8,7 +8,8 @@ const lotteryRules = {
         maxSum: 180,
         defaultPool: "5, 12, 18, 24, 33, 41, 47",
         mainDraw: [7, 14, 23, 35, 42],
-        extraDraw: [3, 9] // Estrelas
+        extraDraw: [3, 9], // 2 Estrelas
+        extraCount: 2
     },
     eurodreams: {
         kSize: 6,
@@ -16,7 +17,8 @@ const lotteryRules = {
         maxSum: 160,
         defaultPool: "4, 11, 18, 22, 29, 31, 37",
         mainDraw: [5, 12, 19, 27, 34, 39],
-        extraDraw: [4] // Sonho
+        extraDraw: [4], // 1 Sonho
+        extraCount: 1
     },
     laprimitiva: {
         kSize: 6,
@@ -24,7 +26,8 @@ const lotteryRules = {
         maxSum: 210,
         defaultPool: "3, 10, 15, 21, 28, 36, 44, 48",
         mainDraw: [8, 15, 22, 31, 40, 47],
-        extraDraw: [5] // Reintegro
+        extraDraw: [5], // 1 Reintegro
+        extraCount: 1
     }
 };
 
@@ -69,7 +72,7 @@ function setGame(gameName, btn) {
     }
 }
 
-// Renderiza as bolas principais e as extras (estrelas/sonho em destaque dourado)
+// Renderiza as bolas principais e as extras no último sorteio simulado
 function renderLastDraw(mainNumbers, extraNumbers, gameName) {
     const overviewSection = document.getElementById('overview');
     if (!overviewSection) return;
@@ -83,7 +86,6 @@ function renderLastDraw(mainNumbers, extraNumbers, gameName) {
     if (ballsContainer) {
         ballsContainer.innerHTML = '';
         
-        // Renderiza os números principais
         mainNumbers.forEach(num => {
             const ball = document.createElement('div');
             ball.className = "ball";
@@ -92,11 +94,10 @@ function renderLastDraw(mainNumbers, extraNumbers, gameName) {
             ballsContainer.appendChild(ball);
         });
 
-        // Renderiza os números extras/estrelas com cor dourada
         extraNumbers.forEach(num => {
             const ball = document.createElement('div');
             ball.className = "ball extra-ball";
-            ball.style.cssText = "width: 36px; height: 36px; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: bold; background: #d4af37; color: #121212;";
+            ball.style.cssText = "width: 36px; height: 36px; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: bold; background: #d4af37; color: #121212; margin-left: 4px;";
             ball.innerText = String(num).padStart(2, '0');
             ballsContainer.appendChild(ball);
         });
@@ -159,6 +160,8 @@ function runGenerator() {
     
     if (resultsContainer) {
         resultsContainer.innerHTML = '';
+        const config = lotteryRules[activeGame];
+
         validGames.forEach((game, index) => {
             const row = document.createElement('div');
             row.style.cssText = "display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: var(--surface-card); border-radius: 8px;";
@@ -170,14 +173,29 @@ function runGenerator() {
             const ballsDiv = document.createElement('div');
             ballsDiv.className = "balls-container";
             ballsDiv.style.margin = "0";
+            ballsDiv.style.display = "flex";
+            ballsDiv.style.alignItems = "center";
+            ballsDiv.style.gap = "6px";
 
+            // Renderiza as dezenas principais combinadas
             game.forEach(num => {
                 const ball = document.createElement('div');
                 ball.className = "ball";
-                ball.style.cssText = "width: 32px; height: 32px; font-size: 0.85rem;";
+                ball.style.cssText = "width: 32px; height: 32px; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: bold;";
                 ball.innerText = String(num).padStart(2, '0');
                 ballsDiv.appendChild(ball);
             });
+
+            // Renderiza os números extras (estrelas/sonho/reintegro) em cada bilhete gerado
+            if (config && config.extraDraw) {
+                config.extraDraw.forEach(extraNum => {
+                    const ball = document.createElement('div');
+                    ball.className = "ball extra-ball";
+                    ball.style.cssText = "width: 32px; height: 32px; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: bold; background: #d4af37; color: #121212; margin-left: 4px;";
+                    ball.innerText = String(extraNum).padStart(2, '0');
+                    ballsDiv.appendChild(ball);
+                });
+            }
 
             row.appendChild(span);
             row.appendChild(ballsDiv);
