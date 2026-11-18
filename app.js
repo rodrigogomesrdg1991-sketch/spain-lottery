@@ -1,6 +1,6 @@
 let activeGame = 'euromillones';
 
-// Dicionário com as regras e dezenas padrão
+// Dicionário com as regras, dezenas padrão e números extras de cada loteria
 const lotteryRules = {
     euromillones: {
         kSize: 5,
@@ -54,7 +54,11 @@ function setGame(gameName, btn) {
     activeGame = gameName;
     
     const gameLabel = document.getElementById('current-game-label');
-    if (gameLabel) gameLabel.innerText = gameName.toUpperCase();
+    if (gameLabel) {
+        let displayName = gameName.toUpperCase();
+        if (gameName === 'laprimitiva') displayName = 'LA PRIMITIVA';
+        gameLabel.innerText = displayName;
+    }
 
     const config = lotteryRules[gameName];
     if (config) {
@@ -78,7 +82,9 @@ function renderLastDraw(mainNumbers, extraNumbers, gameName) {
 
     const titleContainer = overviewSection.querySelector('h3, .card-title, [id*="sorteio"]');
     if (titleContainer) {
-        titleContainer.innerText = `ÚLTIMO SORTEIO SIMULADO (${gameName.toUpperCase()})`;
+        let displayName = gameName.toUpperCase();
+        if (gameName === 'laprimitiva') displayName = 'LA PRIMITIVA';
+        titleContainer.innerText = `ÚLTIMO SORTEIO SIMULADO (${displayName})`;
     }
 
     const ballsContainer = overviewSection.querySelector('.balls-container');
@@ -114,7 +120,7 @@ function runGenerator() {
     const kSizeInput = document.getElementById('k-size');
     const minSumInput = document.getElementById('min-sum');
     const maxSumInput = document.getElementById('max-sum');
-    const modeSelect = document.getElementById('generator-mode'); // Completo ou Reduzido
+    const modeSelect = document.getElementById('generator-mode');
 
     if (!poolInput || !kSizeInput || !minSumInput || !maxSumInput) return;
 
@@ -122,7 +128,7 @@ function runGenerator() {
     const kSize = parseInt(kSizeInput.value, 10);
     const minSum = parseInt(minSumInput.value, 10);
     const maxSum = parseInt(maxSumInput.value, 10);
-    const mode = modeSelect ? modeSelect.value : 'full'; // 'full' ou 'reduced'
+    const mode = modeSelect ? modeSelect.value : 'full';
 
     const pool = poolStr.split(',').map(n => parseInt(n.trim(), 10)).filter(n => !isNaN(n)).sort((a, b) => a - b);
 
@@ -133,7 +139,6 @@ function runGenerator() {
 
     let validGames = [];
 
-    // Geração de combinações
     function combine(start, current) {
         if (current.length === kSize) {
             const sorted = [...current].sort((a, b) => a - b);
@@ -151,29 +156,23 @@ function runGenerator() {
 
     combine(0, []);
 
-    // SE O MODO FOR REDUZIDO: Aplica algoritmo de cobertura e dispersão máxima
     if (mode === 'reduced' && validGames.length > 10) {
         const reducedGames = [];
         const coveredCount = {};
         pool.forEach(n => coveredCount[n] = 0);
 
-        // Embaralha levemente para garantir variabilidade em cada clique
         validGames.sort(() => Math.random() - 0.5);
 
-        // Seleciona bilhetes priorizando aqueles que cobrem números menos repetidos até atingir um teto enxuto (ex: 12 a 15 bilhetes)
         const targetCount = Math.min(15, Math.ceil(validGames.length / 3));
 
         for (let game of validGames) {
             if (reducedGames.length >= targetCount) break;
-            
-            // Verifica se o jogo traz diversidade de cobertura
             reducedGames.push(game);
             game.forEach(n => coveredCount[n] = (coveredCount[n] || 0) + 1);
         }
         validGames = reducedGames;
     }
 
-    // Renderiza os resultados na tela
     const resultsCard = document.getElementById('results-card');
     const resultsContainer = document.getElementById('results-container');
     const resultsTitle = document.getElementById('results-title');
@@ -231,9 +230,7 @@ function runGenerator() {
     }
 }
 
-// Injeção automática do seletor de modo na interface e ligação dos botões
 document.addEventListener('DOMContentLoaded', () => {
-    // Insere o seletor de modo de fechamento logo acima do botão de gerar se não existir
     const generatorSection = document.getElementById('generator');
     if (generatorSection && !document.getElementById('generator-mode')) {
         const controlsContainer = generatorSection.querySelector('.card, form, div');
@@ -265,7 +262,7 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.onclick = (e) => setGame('eurodreams', e.currentTarget);
         } else if (text.includes('primitiva')) {
             btn.classList.add('game-btn');
-            btn.onclick = (e) => setGame('primitiva', e.currentTarget);
+            btn.onclick = (e) => setGame('laprimitiva', e.currentTarget);
         } else if (text.includes('gerar fechamento') || text.includes('otimizado')) {
             btn.id = 'run-generator-btn';
             btn.onclick = () => runGenerator();
