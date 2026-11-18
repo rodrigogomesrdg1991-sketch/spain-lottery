@@ -42,17 +42,16 @@ function switchView(viewId, buttonElement) {
 }
 
 function setGame(gameName, btn) {
-    // Remove a classe active de todos os botões de jogo e adiciona no clicado
+    // Remove a classe active dos botões de jogo e aplica no selecionado
     document.querySelectorAll('.game-btn').forEach(b => b.classList.remove('active'));
     if (btn) btn.classList.add('active');
     
     activeGame = gameName;
     
-    // Atualiza o texto do jogo atual se o elemento existir
     const gameLabel = document.getElementById('current-game-label');
     if (gameLabel) gameLabel.innerText = gameName.toUpperCase();
 
-    // Aplica as regras da loteria selecionada nos inputs do gerador
+    // Aplica as regras da loteria selecionada nos campos do gerador
     const config = lotteryRules[gameName];
     if (config) {
         const poolInput = document.getElementById('pool-input');
@@ -65,23 +64,20 @@ function setGame(gameName, btn) {
         if (minSumInput) minSumInput.value = config.minSum;
         if (maxSumInput) maxSumInput.value = config.maxSum;
 
-        // Atualiza a visualização do último sorteio simulado
         renderLastDraw(config.lastDraw, gameName);
     }
 }
 
-// Renderiza as bolinhas do último sorteio na tela de Visão Geral
+// Renderiza as bolas do último sorteio na Visão Geral
 function renderLastDraw(numbers, gameName) {
     const overviewSection = document.getElementById('overview');
     if (!overviewSection) return;
 
-    // Atualiza o título do card indicando qual loteria está em foco
     const titleContainer = overviewSection.querySelector('h3, .card-title, [id*="sorteio"]');
     if (titleContainer) {
         titleContainer.innerText = `ÚLTIMO SORTEIO SIMULADO (${gameName.toUpperCase()})`;
     }
 
-    // Procura o container das bolinhas
     const ballsContainer = overviewSection.querySelector('.balls-container');
     if (ballsContainer) {
         ballsContainer.innerHTML = '';
@@ -124,7 +120,6 @@ function runGenerator() {
 
     const validGames = [];
 
-    // Algoritmo de combinação matemática (n escolhe k)
     function combine(start, current) {
         if (current.length === kSize) {
             const sorted = [...current].sort((a, b) => a - b);
@@ -142,7 +137,6 @@ function runGenerator() {
 
     combine(0, []);
 
-    // Renderiza os resultados na tela
     const resultsCard = document.getElementById('results-card');
     const resultsContainer = document.getElementById('results-container');
     const resultsTitle = document.getElementById('results-title');
@@ -184,26 +178,22 @@ function runGenerator() {
     }
 }
 
-// Vincula automaticamente os botões do topo aos jogos correspondentes ao carregar a página
+// Vincula apenas as tags de botão reais de forma segura
 document.addEventListener('DOMContentLoaded', () => {
-    const buttons = document.querySelectorAll('button, div, span');
+    const buttons = document.querySelectorAll('button');
     buttons.forEach(btn => {
         const text = btn.innerText ? btn.innerText.trim().toLowerCase() : '';
-        if (text === 'euromillones') {
+        if (text.includes('euromillones')) {
             btn.classList.add('game-btn');
-            btn.style.cursor = 'pointer';
             btn.onclick = (e) => setGame('euromillones', e.currentTarget);
-        } else if (text === 'eurodreams') {
+        } else if (text.includes('eurodreams')) {
             btn.classList.add('game-btn');
-            btn.style.cursor = 'pointer';
             btn.onclick = (e) => setGame('eurodreams', e.currentTarget);
         } else if (text.includes('primitiva')) {
             btn.classList.add('game-btn');
-            btn.style.cursor = 'pointer';
             btn.onclick = (e) => setGame('laprimitiva', e.currentTarget);
         }
     });
 
-    // Inicializa com o Euromillones selecionado por padrão
-    setGame('euromillones', null);
+    setGame('euromillones', document.querySelector('.game-btn') || null);
 });
