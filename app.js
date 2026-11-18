@@ -1,27 +1,30 @@
 let activeGame = 'euromillones';
 
-// Dicionário com as regras específicas de cada loteria espanhola
+// Dicionário com as regras e os números do último sorteio (principais + extras/estrelas)
 const lotteryRules = {
     euromillones: {
         kSize: 5,
         minSum: 80,
         maxSum: 180,
         defaultPool: "5, 12, 18, 24, 33, 41, 47",
-        lastDraw: [7, 14, 23, 35, 42]
+        mainDraw: [7, 14, 23, 35, 42],
+        extraDraw: [3, 9] // Estrelas
     },
     eurodreams: {
         kSize: 6,
         minSum: 70,
         maxSum: 160,
         defaultPool: "4, 11, 18, 22, 29, 31, 37",
-        lastDraw: [5, 12, 19, 27, 34, 39]
+        mainDraw: [5, 12, 19, 27, 34, 39],
+        extraDraw: [4] // Sonho
     },
     laprimitiva: {
         kSize: 6,
         minSum: 90,
         maxSum: 210,
         defaultPool: "3, 10, 15, 21, 28, 36, 44, 48",
-        lastDraw: [8, 15, 22, 31, 40, 47]
+        mainDraw: [8, 15, 22, 31, 40, 47],
+        extraDraw: [5] // Reintegro
     }
 };
 
@@ -42,7 +45,6 @@ function switchView(viewId, buttonElement) {
 }
 
 function setGame(gameName, btn) {
-    // Remove a classe active dos botões de jogo e aplica no selecionado
     document.querySelectorAll('.game-btn').forEach(b => b.classList.remove('active'));
     if (btn) btn.classList.add('active');
     
@@ -51,7 +53,6 @@ function setGame(gameName, btn) {
     const gameLabel = document.getElementById('current-game-label');
     if (gameLabel) gameLabel.innerText = gameName.toUpperCase();
 
-    // Aplica as regras da loteria selecionada nos campos do gerador
     const config = lotteryRules[gameName];
     if (config) {
         const poolInput = document.getElementById('pool-input');
@@ -64,12 +65,12 @@ function setGame(gameName, btn) {
         if (minSumInput) minSumInput.value = config.minSum;
         if (maxSumInput) maxSumInput.value = config.maxSum;
 
-        renderLastDraw(config.lastDraw, gameName);
+        renderLastDraw(config.mainDraw, config.extraDraw, gameName);
     }
 }
 
-// Renderiza as bolas do último sorteio na Visão Geral
-function renderLastDraw(numbers, gameName) {
+// Renderiza as bolas principais e as extras (estrelas/sonho em destaque dourado)
+function renderLastDraw(mainNumbers, extraNumbers, gameName) {
     const overviewSection = document.getElementById('overview');
     if (!overviewSection) return;
 
@@ -81,10 +82,21 @@ function renderLastDraw(numbers, gameName) {
     const ballsContainer = overviewSection.querySelector('.balls-container');
     if (ballsContainer) {
         ballsContainer.innerHTML = '';
-        numbers.forEach(num => {
+        
+        // Renderiza os números principais
+        mainNumbers.forEach(num => {
             const ball = document.createElement('div');
             ball.className = "ball";
             ball.style.cssText = "width: 36px; height: 36px; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: bold;";
+            ball.innerText = String(num).padStart(2, '0');
+            ballsContainer.appendChild(ball);
+        });
+
+        // Renderiza os números extras/estrelas com cor dourada
+        extraNumbers.forEach(num => {
+            const ball = document.createElement('div');
+            ball.className = "ball extra-ball";
+            ball.style.cssText = "width: 36px; height: 36px; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: bold; background: #d4af37; color: #121212;";
             ball.innerText = String(num).padStart(2, '0');
             ballsContainer.appendChild(ball);
         });
@@ -178,7 +190,7 @@ function runGenerator() {
     }
 }
 
-// Vincula apenas as tags de botão reais de forma segura
+// Vincula os botões do topo ao carregar a página
 document.addEventListener('DOMContentLoaded', () => {
     const buttons = document.querySelectorAll('button');
     buttons.forEach(btn => {
