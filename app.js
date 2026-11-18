@@ -1,6 +1,6 @@
 let activeGame = 'euromillones';
 
-// Dicionário com as regras, dezenas padrão e os números extras (estrelas/sonho/reintegro)
+// Dicionário com as regras e dezenas padrão
 const lotteryRules = {
     euromillones: {
         kSize: 5,
@@ -8,7 +8,7 @@ const lotteryRules = {
         maxSum: 180,
         defaultPool: "5, 12, 18, 24, 33, 41, 47",
         mainDraw: [7, 14, 23, 35, 42],
-        extraDraw: [3, 9], // 2 Estrelas
+        extraDraw: [3, 9],
         extraCount: 2
     },
     eurodreams: {
@@ -17,7 +17,7 @@ const lotteryRules = {
         maxSum: 160,
         defaultPool: "4, 11, 18, 22, 29, 31, 37",
         mainDraw: [5, 12, 19, 27, 34, 39],
-        extraDraw: [4], // 1 Sonho
+        extraDraw: [4],
         extraCount: 1
     },
     laprimitiva: {
@@ -26,7 +26,7 @@ const lotteryRules = {
         maxSum: 210,
         defaultPool: "3, 10, 15, 21, 28, 36, 44, 48",
         mainDraw: [8, 15, 22, 31, 40, 47],
-        extraDraw: [5], // 1 Reintegro
+        extraDraw: [5],
         extraCount: 1
     }
 };
@@ -72,7 +72,6 @@ function setGame(gameName, btn) {
     }
 }
 
-// Renderiza as bolas principais e as extras no último sorteio simulado
 function renderLastDraw(mainNumbers, extraNumbers, gameName) {
     const overviewSection = document.getElementById('overview');
     if (!overviewSection) return;
@@ -104,18 +103,18 @@ function renderLastDraw(mainNumbers, extraNumbers, gameName) {
     }
 }
 
-// 1. Valida se a soma das dezenas está dentro da faixa estatística
 function isValidSum(numbers, minSum, maxSum) {
     const sum = numbers.reduce((acc, curr) => acc + curr, 0);
     return sum >= minSum && sum <= maxSum;
 }
 
-// 2. Motor de Fechamentos Matemáticos
+// Motor de Fechamentos Matemáticos com Suporte a Modo Reduzido
 function runGenerator() {
     const poolInput = document.getElementById('pool-input');
     const kSizeInput = document.getElementById('k-size');
     const minSumInput = document.getElementById('min-sum');
     const maxSumInput = document.getElementById('max-sum');
+    const modeSelect = document.getElementById('generator-mode'); // Completo ou Reduzido
 
     if (!poolInput || !kSizeInput || !minSumInput || !maxSumInput) return;
 
@@ -123,6 +122,7 @@ function runGenerator() {
     const kSize = parseInt(kSizeInput.value, 10);
     const minSum = parseInt(minSumInput.value, 10);
     const maxSum = parseInt(maxSumInput.value, 10);
+    const mode = modeSelect ? modeSelect.value : 'full'; // 'full' ou 'reduced'
 
     const pool = poolStr.split(',').map(n => parseInt(n.trim(), 10)).filter(n => !isNaN(n)).sort((a, b) => a - b);
 
@@ -131,8 +131,9 @@ function runGenerator() {
         return;
     }
 
-    const validGames = [];
+    let validGames = [];
 
+    // Geração de combinações
     function combine(start, current) {
         if (current.length === kSize) {
             const sorted = [...current].sort((a, b) => a - b);
@@ -150,12 +151,36 @@ function runGenerator() {
 
     combine(0, []);
 
+    // SE O MODO FOR REDUZIDO: Aplica algoritmo de cobertura e dispersão máxima
+    if (mode === 'reduced' && validGames.length > 10) {
+        const reducedGames = [];
+        const coveredCount = {};
+        pool.forEach(n => coveredCount[n] = 0);
+
+        // Embaralha levemente para garantir variabilidade em cada clique
+        validGames.sort(() => Math.random() - 0.5);
+
+        // Seleciona bilhetes priorizando aqueles que cobrem números menos repetidos até atingir um teto enxuto (ex: 12 a 15 bilhetes)
+        const targetCount = Math.min(15, Math.ceil(validGames.length / 3));
+
+        for (let game of validGames) {
+            if (reducedGames.length >= targetCount) break;
+            
+            // Verifica se o jogo traz diversidade de cobertura
+            reducedGames.push(game);
+            game.forEach(n => coveredCount[n] = (coveredCount[n] || 0) + 1);
+        }
+        validGames = reducedGames;
+    }
+
+    // Renderiza os resultados na tela
     const resultsCard = document.getElementById('results-card');
     const resultsContainer = document.getElementById('results-container');
     const resultsTitle = document.getElementById('results-title');
 
     if (resultsTitle) {
-        resultsTitle.innerText = `Jogos Filtrados e Validados (${validGames.length} combinações)`;
+        const modeLabel = mode === 'reduced' ? ' (Fechamento Reduzido / Económico)' : ' (Fechamento Completo)';
+        resultsTitle.innerText = `Jogos Filtrados e Validados (${validGames.length} combinações)${modeLabel}`;
     }
     
     if (resultsContainer) {
@@ -177,7 +202,6 @@ function runGenerator() {
             ballsDiv.style.alignItems = "center";
             ballsDiv.style.gap = "6px";
 
-            // Renderiza as dezenas principais combinadas
             game.forEach(num => {
                 const ball = document.createElement('div');
                 ball.className = "ball";
@@ -186,7 +210,6 @@ function runGenerator() {
                 ballsDiv.appendChild(ball);
             });
 
-            // Renderiza os números extras (estrelas/sonho/reintegro) em cada bilhete gerado
             if (config && config.extraDraw) {
                 config.extraDraw.forEach(extraNum => {
                     const ball = document.createElement('div');
@@ -208,8 +231,29 @@ function runGenerator() {
     }
 }
 
-// Vincula os botões do topo ao carregar a página
+// Injeção automática do seletor de modo na interface e ligação dos botões
 document.addEventListener('DOMContentLoaded', () => {
+    // Insere o seletor de modo de fechamento logo acima do botão de gerar se não existir
+    const generatorSection = document.getElementById('generator');
+    if (generatorSection && !document.getElementById('generator-mode')) {
+        const controlsContainer = generatorSection.querySelector('.card, form, div');
+        if (controlsContainer) {
+            const modeWrapper = document.createElement('div');
+            modeWrapper.style.cssText = "margin-bottom: 16px; display: flex; flex-direction: column; gap: 6px;";
+            modeWrapper.innerHTML = `
+                <label style="font-size: 0.85rem; color: var(--text-secondary);">Estratégia de Fechamento:</label>
+                <select id="generator-mode" style="background: var(--surface-card); color: var(--text-main); border: 1px solid var(--border-color); padding: 10px; border-radius: 8px; font-family: inherit;">
+                    <option value="reduced">Fechamento Reduzido / Económico (Otimizado)</option>
+                    <option value="full">Fechamento Completo (Todas as combinações)</option>
+                </select>
+            `;
+            const targetBtn = document.getElementById('run-generator-btn') || generatorSection.querySelector('button');
+            if (targetBtn && targetBtn.parentNode) {
+                targetBtn.parentNode.insertBefore(modeWrapper, targetBtn);
+            }
+        }
+    }
+
     const buttons = document.querySelectorAll('button');
     buttons.forEach(btn => {
         const text = btn.innerText ? btn.innerText.trim().toLowerCase() : '';
@@ -221,7 +265,10 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.onclick = (e) => setGame('eurodreams', e.currentTarget);
         } else if (text.includes('primitiva')) {
             btn.classList.add('game-btn');
-            btn.onclick = (e) => setGame('laprimitiva', e.currentTarget);
+            btn.onclick = (e) => setGame('primitiva', e.currentTarget);
+        } else if (text.includes('gerar fechamento') || text.includes('otimizado')) {
+            btn.id = 'run-generator-btn';
+            btn.onclick = () => runGenerator();
         }
     });
 
