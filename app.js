@@ -214,7 +214,7 @@ function renderHistoryView() {
 
     contentContainer.innerHTML = `
         <div style="background: var(--surface-card); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color);">
-            <h3 style="margin-bottom: 15px; font-size: 1.1rem; color: var(--text-main);">Histórico de Concursos Officiais — ${displayName}</h3>
+            <h3 style="margin-bottom: 15px; font-size: 1.1rem; color: var(--text-main);">Histórico de Concursos Oficiais — ${displayName}</h3>
             <div style="display: flex; flex-direction: column; gap: 10px;" id="history-rows-container">
             </div>
         </div>
