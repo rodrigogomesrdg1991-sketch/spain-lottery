@@ -77,3 +77,20 @@ function renderLastDraw(numbers, gameName) {
         });
     }
 }
+// Garante que os botões do topo funcionam automaticamente ao carregar a página
+document.addEventListener('DOMContentLoaded', () => {
+    const buttons = document.querySelectorAll('button');
+    buttons.forEach(btn => {
+        const text = btn.innerText.trim().toLowerCase();
+        if (text.includes('euromillones')) {
+            btn.classList.add('game-btn');
+            btn.onclick = () => setGame('euromillones', btn);
+        } else if (text.includes('eurodreams')) {
+            btn.classList.add('game-btn');
+            btn.onclick = () => setGame('eurodreams', btn);
+        } else if (text.includes('primitiva')) {
+            btn.classList.add('game-btn');
+            btn.onclick = () => setGame('laprimitiva', btn);
+        }
+    });
+});
