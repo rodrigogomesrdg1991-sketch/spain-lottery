@@ -247,6 +247,66 @@ const lotteryRules = {
     }
 };
 
+function applyMobileStyles() {
+    if (document.getElementById('mobile-responsive-style')) return;
+
+    const style = document.createElement('style');
+    style.id = 'mobile-responsive-style';
+    style.textContent = `
+        @media (max-width: 768px) {
+            body {
+                overflow-x: hidden;
+                padding-bottom: 24px;
+            }
+
+            .main-content, main, .container, .dashboard-container {
+                padding-left: 12px !important;
+                padding-right: 12px !important;
+                max-width: 100% !important;
+                box-sizing: border-box;
+            }
+
+            .nav-btn, .game-btn, #run-generator-btn, button {
+                min-height: 44px;
+                font-size: 0.92rem;
+            }
+
+            .game-btn {
+                flex: 1 1 auto;
+                text-align: center;
+            }
+
+            #generator-mode,
+            #pool-input,
+            #k-size,
+            #min-sum,
+            #max-sum,
+            input,
+            select {
+                width: 100% !important;
+                min-height: 44px;
+                font-size: 16px !important;
+                box-sizing: border-box;
+            }
+
+            #results-container > div,
+            #history-rows-container > div {
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                gap: 10px !important;
+                padding: 12px !important;
+            }
+
+            #results-container .balls-container,
+            #history-rows-container > div > div:last-child {
+                flex-wrap: wrap !important;
+                max-width: 100%;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+}
+
 function switchView(viewId, buttonElement) {
     document.querySelectorAll('.view-section').forEach(sec => sec.classList.remove('active'));
     document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
@@ -514,6 +574,8 @@ function runGenerator() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    applyMobileStyles();
+
     const generatorSection = document.getElementById('generator');
     if (generatorSection && !document.getElementById('generator-mode')) {
         const controlsContainer = generatorSection.querySelector('.card, form, div');
