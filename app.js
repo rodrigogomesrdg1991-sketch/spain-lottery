@@ -574,45 +574,109 @@ function runGenerator() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    applyMobileStyles();
+   function applyMobileStyles() {
+    if (document.getElementById('mobile-responsive-style')) return;
 
-    const generatorSection = document.getElementById('generator');
-    if (generatorSection && !document.getElementById('generator-mode')) {
-        const controlsContainer = generatorSection.querySelector('.card, form, div');
-        if (controlsContainer) {
-            const modeWrapper = document.createElement('div');
-            modeWrapper.style.cssText = "margin-bottom: 16px; display: flex; flex-direction: column; gap: 6px;";
-            modeWrapper.innerHTML = `
-                <label style="font-size: 0.85rem; color: var(--text-secondary);">Estratégia de Fechamento:</label>
-                <select id="generator-mode" style="background: var(--surface-card); color: var(--text-main); border: 1px solid var(--border-color); padding: 10px; border-radius: 8px; font-family: inherit;">
-                    <option value="reduced">Fechamento Reduzido / Económico (Otimizado)</option>
-                    <option value="full">Fechamento Completo (Todas as combinações)</option>
-                </select>
-            `;
-            const targetBtn = document.getElementById('run-generator-btn') || generatorSection.querySelector('button');
-            if (targetBtn && targetBtn.parentNode) {
-                targetBtn.parentNode.insertBefore(modeWrapper, targetBtn);
+    const style = document.createElement('style');
+    style.id = 'mobile-responsive-style';
+    style.textContent = `
+        @media (max-width: 768px) {
+            html, body {
+                overflow-x: hidden !important;
+                max-width: 100vw !important;
+                padding-bottom: 24px;
+            }
+
+            /* Se houver layout em flex/grid lado a lado, empilha na vertical */
+            .app-layout, .dashboard-layout, .layout, .main-wrapper, main, .container, .dashboard-container {
+                display: flex !important;
+                flex-direction: column !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                padding-left: 12px !important;
+                padding-right: 12px !important;
+                box-sizing: border-box !important;
+            }
+
+            /* Barra lateral vira faixa horizontal compacta em cima */
+            aside, .sidebar, .side-nav, nav.sidebar {
+                position: static !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                height: auto !important;
+                min-height: 0 !important;
+                border-right: none !important;
+                border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.08)) !important;
+                padding: 10px 12px !important;
+                box-sizing: border-box !important;
+            }
+
+            aside .nav-menu, .sidebar ul, .sidebar nav {
+                display: flex !important;
+                flex-direction: row !important;
+                flex-wrap: wrap !important;
+                gap: 8px !important;
+            }
+
+            .main-content, .content, [class*="content"] {
+                width: 100% !important;
+                max-width: 100% !important;
+                margin-left: 0 !important;
+                padding-left: 12px !important;
+                padding-right: 12px !important;
+                box-sizing: border-box !important;
+            }
+
+            h1, h2, h3, #view-title {
+                font-size: 1.35rem !important;
+                line-height: 1.25 !important;
+                word-break: break-word;
+            }
+
+            .nav-btn, .game-btn, #run-generator-btn, button {
+                min-height: 44px;
+                font-size: 0.9rem;
+                white-space: normal !important;
+            }
+
+            .game-btn {
+                flex: 1 1 auto;
+                text-align: center;
+            }
+
+            .balls-container {
+                flex-wrap: wrap !important;
+                gap: 6px !important;
+                max-width: 100% !important;
+            }
+
+            #generator-mode,
+            #pool-input,
+            #k-size,
+            #min-sum,
+            #max-sum,
+            input,
+            select {
+                width: 100% !important;
+                min-height: 44px;
+                font-size: 16px !important;
+                box-sizing: border-box !important;
+            }
+
+            #results-container > div,
+            #history-rows-container > div {
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                gap: 10px !important;
+                padding: 12px !important;
+            }
+
+            #results-container .balls-container,
+            #history-rows-container > div > div:last-child {
+                flex-wrap: wrap !important;
+                max-width: 100%;
             }
         }
-    }
-
-    const buttons = document.querySelectorAll('button');
-    buttons.forEach(btn => {
-        const text = btn.innerText ? btn.innerText.trim().toLowerCase() : '';
-        if (text.includes('euromillones')) {
-            btn.classList.add('game-btn');
-            btn.onclick = (e) => setGame('euromillones', e.currentTarget);
-        } else if (text.includes('eurodreams')) {
-            btn.classList.add('game-btn');
-            btn.onclick = (e) => setGame('eurodreams', e.currentTarget);
-        } else if (text.includes('primitiva')) {
-            btn.classList.add('game-btn');
-            btn.onclick = (e) => setGame('laprimitiva', e.currentTarget);
-        } else if (text.includes('gerar fechamento') || text.includes('otimizado')) {
-            btn.id = 'run-generator-btn';
-            btn.onclick = () => runGenerator();
-        }
-    });
-
-    setGame('euromillones', document.querySelector('.game-btn') || null);
-});
+    `;
+    document.head.appendChild(style);
+}
