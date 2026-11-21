@@ -11,7 +11,7 @@ const lotteryRules = {
         extraDraw: [1, 2],
         extraCount: 2,
         history: [
-            { date: "20/11/2026", numbers: [08, 21, 24, 36, 49], extras: [1, 8] },
+            { date: "20/11/2026", numbers: [8, 21, 24, 36, 49], extras: [1, 8] },
             { date: "17/11/2026", numbers: [35, 37, 38, 46, 48], extras: [1, 2] },
             { date: "13/11/2026", numbers: [16, 27, 32, 41, 45], extras: [2, 12] },
             { date: "10/11/2026", numbers: [15, 18, 31, 37, 41], extras: [1, 5] },
@@ -256,26 +256,71 @@ function applyMobileStyles() {
     style.id = 'mobile-responsive-style';
     style.textContent = `
         @media (max-width: 768px) {
-            body {
-                overflow-x: hidden;
+            html, body {
+                overflow-x: hidden !important;
+                max-width: 100vw !important;
                 padding-bottom: 24px;
             }
 
-            .main-content, main, .container, .dashboard-container {
+            .app-layout, .dashboard-layout, .layout, .main-wrapper, main, .container, .dashboard-container {
+                display: flex !important;
+                flex-direction: column !important;
+                width: 100% !important;
+                max-width: 100% !important;
                 padding-left: 12px !important;
                 padding-right: 12px !important;
+                box-sizing: border-box !important;
+            }
+
+            aside, .sidebar, .side-nav, nav.sidebar {
+                position: static !important;
+                width: 100% !important;
                 max-width: 100% !important;
-                box-sizing: border-box;
+                height: auto !important;
+                min-height: 0 !important;
+                border-right: none !important;
+                border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.08)) !important;
+                padding: 10px 12px !important;
+                box-sizing: border-box !important;
+            }
+
+            aside .nav-menu, .sidebar ul, .sidebar nav {
+                display: flex !important;
+                flex-direction: row !important;
+                flex-wrap: wrap !important;
+                gap: 8px !important;
+            }
+
+            .main-content, .content, [class*="content"] {
+                width: 100% !important;
+                max-width: 100% !important;
+                margin-left: 0 !important;
+                padding-left: 12px !important;
+                padding-right: 12px !important;
+                box-sizing: border-box !important;
+            }
+
+            h1, h2, h3, #view-title {
+                font-size: 1.35rem !important;
+                line-height: 1.25 !important;
+                word-break: break-word;
             }
 
             .nav-btn, .game-btn, #run-generator-btn, button {
                 min-height: 44px;
                 font-size: 0.92rem;
+                white-space: normal !important;
             }
 
             .game-btn {
                 flex: 1 1 auto;
                 text-align: center;
+            }
+
+            .balls-container {
+                flex-wrap: wrap !important;
+                gap: 6px !important;
+                max-width: 100% !important;
             }
 
             #generator-mode,
@@ -288,7 +333,7 @@ function applyMobileStyles() {
                 width: 100% !important;
                 min-height: 44px;
                 font-size: 16px !important;
-                box-sizing: border-box;
+                box-sizing: border-box !important;
             }
 
             #results-container > div,
@@ -355,7 +400,11 @@ function setGame(gameName, btn) {
         if (minSumInput) minSumInput.value = config.minSum;
         if (maxSumInput) maxSumInput.value = config.maxSum;
 
-        renderLastDraw(config.mainDraw, config.extraDraw, gameName);
+        const latestDraw = config.history && config.history.length > 0 ? config.history[0] : null;
+        const latestMain = latestDraw && Array.isArray(latestDraw.numbers) ? latestDraw.numbers : config.mainDraw;
+        const latestExtras = latestDraw && Array.isArray(latestDraw.extras) ? latestDraw.extras : config.extraDraw;
+
+        renderLastDraw(latestMain, latestExtras, gameName);
         
         if (document.getElementById('history') && document.getElementById('history').classList.contains('active')) {
             renderHistoryView();
@@ -460,6 +509,83 @@ function isValidSum(numbers, minSum, maxSum) {
     return sum >= minSum && sum <= maxSum;
 }
 
+function getHistoryStats(gameName) {
+    const config = lotteryRules[gameName];
+    const freq = {};
+    const lastSeenIndex = {};
+
+    if (!config || !Array.isArray(config.history)) {
+        return { freq, lastSeenIndex, totalDraws: 0 };
+    }
+
+    config.history.forEach((draw, idx) => {
+        if (!Array.isArray(draw.numbers)) return;
+        draw.numbers.forEach(num => {
+            freq[num] = (freq[num] || 0) + 1;
+            if (lastSeenIndex[num] === undefined) {
+                lastSeenIndex[num] = idx;
+            }
+        });
+    });
+
+    return {
+        freq,
+        lastSeenIndex,
+        totalDraws: config.history.length
+    };
+}
+
+function scoreCombinationWithHistory(combo, stats) {
+    if (!stats || stats.totalDraws === 0) return 0;
+
+    let score = 0;
+    combo.forEach(num => {
+        const count = stats.freq[num] || 0;
+        const delay = stats.lastSeenIndex[num] !== undefined ? stats.lastSeenIndex[num] : stats.totalDraws;
+        score += (count / stats.totalDraws) * 10 + Math.min(delay, 15) * 0.6;
+    });
+
+    return score;
+}
+
+function selectReducedCover(validGames, pool, targetCount, stats) {
+    const selected = [];
+    const remaining = [...validGames];
+    const numberUsage = {};
+    pool.forEach(n => { numberUsage[n] = 0; });
+
+    remaining.sort((a, b) => {
+        const diff = scoreCombinationWithHistory(b, stats) - scoreCombinationWithHistory(a, stats);
+        return diff !== 0 ? diff : (Math.random() - 0.5) * 0.4;
+    });
+
+    while (selected.length < targetCount && remaining.length > 0) {
+        let bestIdx = 0;
+        let bestGain = -Infinity;
+
+        const limit = Math.min(remaining.length, 80);
+        for (let i = 0; i < limit; i++) {
+            const candidate = remaining[i];
+            const coverageGain = candidate.reduce((acc, n) => acc + (1 / (1 + (numberUsage[n] || 0))), 0);
+            const histBonus = scoreCombinationWithHistory(candidate, stats) * 0.15;
+            const totalGain = coverageGain + histBonus;
+
+            if (totalGain > bestGain) {
+                bestGain = totalGain;
+                bestIdx = i;
+            }
+        }
+
+        const chosen = remaining.splice(bestIdx, 1)[0];
+        selected.push(chosen);
+        chosen.forEach(n => {
+            numberUsage[n] = (numberUsage[n] || 0) + 1;
+        });
+    }
+
+    return selected;
+}
+
 function runGenerator() {
     const poolInput = document.getElementById('pool-input');
     const kSizeInput = document.getElementById('k-size');
@@ -475,7 +601,11 @@ function runGenerator() {
     const maxSum = parseInt(maxSumInput.value, 10);
     const mode = modeSelect ? modeSelect.value : 'full';
 
-    const pool = poolStr.split(',').map(n => parseInt(n.trim(), 10)).filter(n => !isNaN(n)).sort((a, b) => a - b);
+    const pool = [...new Set(
+        poolStr.split(',')
+            .map(n => parseInt(n.trim(), 10))
+            .filter(n => !isNaN(n))
+    )].sort((a, b) => a - b);
 
     if (pool.length < kSize) {
         alert(`O grupo precisa ter pelo menos ${kSize} números.`);
@@ -501,43 +631,43 @@ function runGenerator() {
 
     combine(0, []);
 
+    const stats = getHistoryStats(activeGame);
+
+    if (validGames.length === 0) {
+        alert("Nenhuma combinação passou no filtro de soma mínima/máxima com esse grupo de números.");
+        return;
+    }
+
     if (mode === 'reduced' && validGames.length > 10) {
-        const reducedGames = [];
-        const coveredCount = {};
-        pool.forEach(n => coveredCount[n] = 0);
-
-        validGames.sort(() => Math.random() - 0.5);
-
-        const targetCount = Math.min(15, Math.ceil(validGames.length / 3));
-
-        for (let game of validGames) {
-            if (reducedGames.length >= targetCount) break;
-            reducedGames.push(game);
-            game.forEach(n => coveredCount[n] = (coveredCount[n] || 0) + 1);
-        }
-        validGames = reducedGames;
+        const targetCount = Math.min(15, Math.max(5, Math.ceil(validGames.length / 3)));
+        validGames = selectReducedCover(validGames, pool, targetCount, stats);
+    } else {
+        validGames.sort((a, b) => scoreCombinationWithHistory(b, stats) - scoreCombinationWithHistory(a, stats));
     }
 
     const resultsCard = document.getElementById('results-card');
     const resultsContainer = document.getElementById('results-container');
     const resultsTitle = document.getElementById('results-title');
+    const config = lotteryRules[activeGame];
+    const latestDrawNumbers = config && config.history && config.history[0] ? config.history[0].numbers : [];
 
     if (resultsTitle) {
-        const modeLabel = mode === 'reduced' ? ' (Fechamento Reduzido / Económico)' : ' (Fechamento Completo)';
+        const modeLabel = mode === 'reduced' ? ' (Fechamento Reduzido / Cobertura)' : ' (Fechamento Completo)';
         resultsTitle.innerText = `Jogos Filtrados e Validados (${validGames.length} combinações)${modeLabel}`;
     }
     
     if (resultsContainer) {
         resultsContainer.innerHTML = '';
-        const config = lotteryRules[activeGame];
 
         validGames.forEach((game, index) => {
             const row = document.createElement('div');
-            row.style.cssText = "display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: var(--surface-card); border-radius: 8px;";
-            
+            row.style.cssText = "display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: var(--surface-card); border-radius: 8px; gap: 8px;";
+
+            const hitsInLatest = game.filter(n => latestDrawNumbers.includes(n)).length;
+
             const span = document.createElement('span');
             span.style.cssText = "font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; color: var(--text-secondary);";
-            span.innerText = `#${index + 1}`;
+            span.innerText = `#${index + 1} · Último: ${hitsInLatest} ac.`;
             
             const ballsDiv = document.createElement('div');
             ballsDiv.className = "balls-container";
@@ -547,9 +677,10 @@ function runGenerator() {
             ballsDiv.style.gap = "6px";
 
             game.forEach(num => {
+                const isHit = latestDrawNumbers.includes(num);
                 const ball = document.createElement('div');
                 ball.className = "ball";
-                ball.style.cssText = "width: 32px; height: 32px; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: bold;";
+                ball.style.cssText = `width: 32px; height: 32px; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: bold; ${isHit ? 'outline: 2px solid #22c55e;' : ''}`;
                 ball.innerText = String(num).padStart(2, '0');
                 ballsDiv.appendChild(ball);
             });
