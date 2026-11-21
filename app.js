@@ -11,6 +11,7 @@ const lotteryRules = {
         extraDraw: [1, 2],
         extraCount: 2,
         history: [
+            { date: "20/11/2026", numbers: [08, 21, 24, 36, 49], extras: [1, 8] },
             { date: "17/11/2026", numbers: [35, 37, 38, 46, 48], extras: [1, 2] },
             { date: "13/11/2026", numbers: [16, 27, 32, 41, 45], extras: [2, 12] },
             { date: "10/11/2026", numbers: [15, 18, 31, 37, 41], extras: [1, 5] },
@@ -122,6 +123,7 @@ const lotteryRules = {
         extraDraw: [2],
         extraCount: 1,
         history: [
+            { date: "19/11/2026", numbers: [5, 8, 18, 24, 27, 39], extras: [2] },
             { date: "16/11/2026", numbers: [2, 4, 11, 14, 17, 18], extras: [2] },
             { date: "12/11/2026", numbers: [5, 10, 15, 18, 19, 37], extras: [1] },
             { date: "09/11/2026", numbers: [1, 3, 6, 12, 27, 37], extras: [1] },
