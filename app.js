@@ -306,7 +306,7 @@ function applyMobileStyles() {
                 word-break: break-word;
             }
 
-            .nav-btn, .game-btn, #run-generator-btn, button {
+            .nav-btn, .game-btn, #run-generator-btn, .auto-pool-btn, button {
                 min-height: 44px;
                 font-size: 0.92rem;
                 white-space: normal !important;
@@ -315,6 +315,13 @@ function applyMobileStyles() {
             .game-btn {
                 flex: 1 1 auto;
                 text-align: center;
+            }
+
+            .auto-pool-actions {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 8px !important;
+                width: 100% !important;
             }
 
             .balls-container {
@@ -513,14 +520,16 @@ function getHistoryStats(gameName) {
     const config = lotteryRules[gameName];
     const freq = {};
     const lastSeenIndex = {};
+    let maxNumber = gameName === 'eurodreams' ? 40 : (gameName === 'laprimitiva' ? 49 : 50);
 
     if (!config || !Array.isArray(config.history)) {
-        return { freq, lastSeenIndex, totalDraws: 0 };
+        return { freq, lastSeenIndex, totalDraws: 0, maxNumber };
     }
 
     config.history.forEach((draw, idx) => {
         if (!Array.isArray(draw.numbers)) return;
         draw.numbers.forEach(num => {
+            if (num > maxNumber) maxNumber = num;
             freq[num] = (freq[num] || 0) + 1;
             if (lastSeenIndex[num] === undefined) {
                 lastSeenIndex[num] = idx;
@@ -531,8 +540,52 @@ function getHistoryStats(gameName) {
     return {
         freq,
         lastSeenIndex,
-        totalDraws: config.history.length
+        totalDraws: config.history.length,
+        maxNumber
     };
+}
+
+function fillPoolFromHistory(strategy = 'balanced') {
+    const poolInput = document.getElementById('pool-input');
+    const config = lotteryRules[activeGame];
+    if (!poolInput || !config) return;
+
+    const stats = getHistoryStats(activeGame);
+    const targetPoolSize = Math.max(config.kSize + 4, 10);
+    const candidates = [];
+
+    for (let n = 1; n <= stats.maxNumber; n++) {
+        const count = stats.freq[n] || 0;
+        const delay = stats.lastSeenIndex[n] !== undefined ? stats.lastSeenIndex[n] : stats.totalDraws + 5;
+        candidates.push({ num: n, count, delay });
+    }
+
+    if (strategy === 'hot') {
+        candidates.sort((a, b) => (b.count - a.count) || (a.delay - b.delay));
+    } else if (strategy === 'overdue') {
+        candidates.sort((a, b) => (b.delay - a.delay) || (b.count - a.count));
+    } else {
+        // Equilibrado: combina metade das mais frequentes com metade das mais atrasadas
+        const byHot = [...candidates].sort((a, b) => (b.count - a.count) || (a.delay - b.delay));
+        const byOverdue = [...candidates].sort((a, b) => (b.delay - a.delay) || (b.count - a.count));
+        const picked = new Set();
+        let i = 0;
+        while (picked.size < targetPoolSize && i < candidates.length) {
+            if (byHot[i]) picked.add(byHot[i].num);
+            if (picked.size < targetPoolSize && byOverdue[i]) picked.add(byOverdue[i].num);
+            i++;
+        }
+        const balancedList = [...picked].sort((a, b) => a - b);
+        poolInput.value = balancedList.join(', ');
+        return;
+    }
+
+    const chosen = candidates
+        .slice(0, targetPoolSize)
+        .map(item => item.num)
+        .sort((a, b) => a - b);
+
+    poolInput.value = chosen.join(', ');
 }
 
 function scoreCombinationWithHistory(combo, stats) {
@@ -649,7 +702,9 @@ function runGenerator() {
     const resultsContainer = document.getElementById('results-container');
     const resultsTitle = document.getElementById('results-title');
     const config = lotteryRules[activeGame];
-    const latestDrawNumbers = config && config.history && config.history[0] ? config.history[0].numbers : [];
+    const latestDraw = config && config.history && config.history[0] ? config.history[0] : null;
+    const latestDrawNumbers = latestDraw ? latestDraw.numbers : [];
+    const latestExtraNumbers = latestDraw && Array.isArray(latestDraw.extras) ? latestDraw.extras : (config ? config.extraDraw : []);
 
     if (resultsTitle) {
         const modeLabel = mode === 'reduced' ? ' (Fechamento Reduzido / Cobertura)' : ' (Fechamento Completo)';
@@ -685,8 +740,8 @@ function runGenerator() {
                 ballsDiv.appendChild(ball);
             });
 
-            if (config && config.extraDraw) {
-                config.extraDraw.forEach(extraNum => {
+            if (latestExtraNumbers) {
+                latestExtraNumbers.forEach(extraNum => {
                     const ball = document.createElement('div');
                     ball.className = "ball extra-ball";
                     ball.style.cssText = "width: 32px; height: 32px; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: bold; background: #d4af37; color: #121212; margin-left: 4px;";
@@ -709,6 +764,32 @@ function runGenerator() {
 document.addEventListener('DOMContentLoaded', () => {
     applyMobileStyles();
 
+    const poolInput = document.getElementById('pool-input');
+    if (poolInput && poolInput.parentNode && !document.getElementById('auto-pool-controls')) {
+        const autoPoolBar = document.createElement('div');
+        autoPoolBar.id = 'auto-pool-controls';
+        autoPoolBar.className = 'auto-pool-actions';
+        autoPoolBar.style.cssText = "display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; margin-bottom: 12px;";
+
+        const presets = [
+            { label: '⚡ Sugerir Quentes (Histórico)', mode: 'hot' },
+            { label: '⏳ Sugerir Atrasadas (Histórico)', mode: 'overdue' },
+            { label: '⚖️ Sugerir Equilibradas', mode: 'balanced' }
+        ];
+
+        presets.forEach(preset => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'auto-pool-btn';
+            btn.innerText = preset.label;
+            btn.style.cssText = "background: rgba(212, 175, 55, 0.14); color: var(--text-main); border: 1px solid rgba(212, 175, 55, 0.45); padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 0.82rem; font-family: inherit;";
+            btn.onclick = () => fillPoolFromHistory(preset.mode);
+            autoPoolBar.appendChild(btn);
+        });
+
+        poolInput.parentNode.insertBefore(autoPoolBar, poolInput.nextSibling);
+    }
+
     const generatorSection = document.getElementById('generator');
     if (generatorSection && !document.getElementById('generator-mode')) {
         const controlsContainer = generatorSection.querySelector('.card, form, div');
@@ -729,7 +810,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    const buttons = document.querySelectorAll('button');
+    const buttons = document.querySelectorAll('button:not(.auto-pool-btn)');
     buttons.forEach(btn => {
         const text = btn.innerText ? btn.innerText.trim().toLowerCase() : '';
         if (text.includes('euromillones')) {
